@@ -4,13 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"llm-caller/pkg/config"
-	"llm-caller/pkg/llm"
-	"llm-caller/pkg/templates"
-	"llm-caller/pkg/utils"
 	"os"
 	"strings"
 
+	"github.com/nodewee/llm-caller/pkg/config"
+	"github.com/nodewee/llm-caller/pkg/llm"
+	"github.com/nodewee/llm-caller/pkg/templates"
+	"github.com/nodewee/llm-caller/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

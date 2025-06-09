@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"llm-caller/cmd"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/nodewee/llm-caller/cmd"
 )
 
 // Version information populated at build time

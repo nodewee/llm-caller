@@ -3,12 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"llm-caller/pkg/config"
-	"llm-caller/pkg/download"
-	"llm-caller/pkg/templates"
-	"llm-caller/pkg/utils"
 	"os"
 
+	"github.com/nodewee/llm-caller/pkg/config"
+	"github.com/nodewee/llm-caller/pkg/download"
+	"github.com/nodewee/llm-caller/pkg/templates"
+	"github.com/nodewee/llm-caller/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

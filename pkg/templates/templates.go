@@ -3,10 +3,11 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
-	"llm-caller/pkg/config"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/nodewee/llm-caller/pkg/config"
 )
 
 // RequestConfig contains the HTTP request configuration

@@ -1,7 +1,7 @@
 package llm
 
 import (
-	"llm-caller/pkg/templates"
+	"github.com/nodewee/llm-caller/pkg/templates"
 )
 
 // Provider is an interface for LLM providers

@@ -3,13 +3,14 @@ package download
 import (
 	"fmt"
 	"io"
-	"llm-caller/pkg/utils"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/nodewee/llm-caller/pkg/utils"
 )
 
 // GitHubDownloader handles downloading files from GitHub URLs

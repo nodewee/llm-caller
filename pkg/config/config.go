@@ -3,9 +3,10 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"llm-caller/pkg/utils"
 	"os"
 	"path/filepath"
+
+	"github.com/nodewee/llm-caller/pkg/utils"
 
 	"github.com/spf13/viper"
 )

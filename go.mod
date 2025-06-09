@@ -1,4 +1,4 @@
-module llm-caller
+module github.com/nodewee/llm-caller
 
 go 1.21.0
 

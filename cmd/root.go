@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"llm-caller/pkg/config"
 	"os"
+
+	"github.com/nodewee/llm-caller/pkg/config"
 
 	"github.com/spf13/cobra"
 )

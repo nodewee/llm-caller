@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"llm-caller/pkg/templates"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/nodewee/llm-caller/pkg/templates"
 )
 
 // GenericClient is a generic HTTP client for calling LLM APIs
