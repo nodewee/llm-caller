@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/nodewee/llm-caller/pkg/config"
 	"github.com/nodewee/llm-caller/pkg/download"
@@ -158,8 +160,62 @@ func runTemplateDownload(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// checkTemplateExists checks if a template file exists before trying to load it
+func checkTemplateExists(cfg *config.Config, templateName string) error {
+	// Automatically append .json extension if not present
+	if !strings.HasSuffix(templateName, ".json") {
+		templateName = templateName + ".json"
+	}
+
+	// Check if it's a direct path (absolute or contains path separators)
+	isDirectPath := filepath.IsAbs(templateName) || strings.ContainsAny(templateName, "/\\")
+
+	if isDirectPath {
+		// Normalize path for cross-platform compatibility
+		templateName = filepath.Clean(filepath.FromSlash(templateName))
+		if _, err := os.Stat(templateName); os.IsNotExist(err) {
+			return fmt.Errorf("template file not found: %s", templateName)
+		}
+		return nil
+	}
+
+	// For template names without path separators, search in directories
+	var exists bool
+
+	// First, try user configured template directory
+	userTemplateDir := cfg.GetString(config.KeyTemplateDir)
+	if userTemplateDir != "" {
+		userTemplatePath := filepath.Join(userTemplateDir, templateName)
+		if _, err := os.Stat(userTemplatePath); err == nil {
+			exists = true
+		}
+	}
+
+	// Second, try default app config templates directory
+	if !exists {
+		defaultTemplateDir, err := config.GetDefaultTemplateDir()
+		if err == nil {
+			defaultTemplatePath := filepath.Join(defaultTemplateDir, templateName)
+			if _, err := os.Stat(defaultTemplatePath); err == nil {
+				exists = true
+			}
+		}
+	}
+
+	if !exists {
+		return fmt.Errorf("template file not found: %s", templateName)
+	}
+
+	return nil
+}
+
 func runTemplateShow(cmd *cobra.Command, args []string) error {
 	templateName := args[0]
+
+	// First check if the template exists
+	if err := checkTemplateExists(cfg, templateName); err != nil {
+		return err
+	}
 
 	// Load the template
 	template, err := templates.LoadTemplate(cfg, templateName)
@@ -179,6 +235,11 @@ func runTemplateShow(cmd *cobra.Command, args []string) error {
 
 func runTemplateValidate(cmd *cobra.Command, args []string) error {
 	templateName := args[0]
+
+	// First check if the template exists
+	if err := checkTemplateExists(cfg, templateName); err != nil {
+		return err
+	}
 
 	// Try to load and validate the template
 	template, err := templates.LoadTemplate(cfg, templateName)
