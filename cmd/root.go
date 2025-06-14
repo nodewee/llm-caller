@@ -24,12 +24,15 @@ Main Commands:
   template   Manage template files (download, list, show, validate)
   config     Configure application settings
   doctor     Check configuration and environment
-  version    Display version information (or use --version flag)
+  version    Display detailed version information with commit hash and build time
+
+You can also use --version flag to display basic version information.
 
 Examples:
   llm-caller call deepseek-chat --var prompt="Hello world"
-  llm-caller template list
-  llm-caller config set template_dir ~/my-templates
+  llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
+  llm-caller config template_dir ~/my-templates
+  llm-caller doctor
   llm-caller version
 
 Use "llm-caller <command> --help" for more information about a command.`,

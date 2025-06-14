@@ -63,6 +63,12 @@ var templateValidateCmd = &cobra.Command{
 	Short: "Validate template structure",
 	Long: `Validate that a template file has correct JSON structure and required fields.
 
+This checks for:
+- Valid JSON format
+- Required fields (provider, request URL, request body)
+- Proper structure for HTTP requests
+- Response handling configuration
+
 Examples:
   llm-caller template validate deepseek-chat
   llm-caller template validate my-template.json`,

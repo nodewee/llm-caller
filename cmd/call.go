@@ -30,6 +30,13 @@ var callCmd = &cobra.Command{
 This command loads a template, replaces variables, and makes an HTTP request to the LLM service.
 The result is either printed to stdout or saved to a file.
 
+API keys are checked in this order:
+1. --api-key command line flag
+2. Keys file (configured with 'config secret_file')
+3. Environment variables (provider-specific keys checked first)
+
+API keys are optional for local LLMs like Ollama that don't require authentication.
+
 Examples:
   llm-caller call deepseek-chat --var prompt="Hello world"
   llm-caller call translate --var text:file:doc.txt -o result.txt

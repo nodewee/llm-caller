@@ -53,10 +53,10 @@ llm-caller template validate <template-name> # Validate template structure
 ### ⚙️ `config` - Configure Settings
 Manage configuration:
 ```bash
-llm-caller config set <key> <value>         # Set configuration
-llm-caller config get <key>                 # Get configuration value
-llm-caller config list                      # Show all settings
-llm-caller config unset <key>               # Remove setting (revert to default)
+llm-caller config <key>                     # Get configuration value
+llm-caller config <key> <value>             # Set configuration
+llm-caller config ls                        # Show all settings
+llm-caller config rm <key>                  # Remove setting (revert to default)
 ```
 
 ### 🩺 `doctor` - Environment Check
@@ -65,10 +65,17 @@ Check configuration and environment:
 llm-caller doctor                           # Diagnose setup issues
 ```
 
+The doctor command checks:
+- Configuration file existence and validity
+- Template directories accessibility
+- API keys availability (from file and environment variables)
+- Template file integrity
+- Provides specific recommendations to fix identified issues
+
 ### 🔍 `version` - Version Information
 Display version and build information:
 ```bash
-llm-caller version                          # Show detailed version info
+llm-caller version                          # Show detailed version info with commit hash and build time
 llm-caller --version                        # Show basic version number
 ```
 
@@ -84,13 +91,13 @@ Configuration is stored in `~/.llm-caller/config.yaml`. Available settings:
 API keys are checked in this order:
 1. `--api-key` command line flag
 2. Keys file (JSON format): `{"deepseek_api_key": "sk-xxx", "api_key": "sk-xxx"}`
-3. Environment variables: `DEEPSEEK_API_KEY`, `API_KEY`
+3. Environment variables: `DEEPSEEK_API_KEY`, `API_KEY` (provider-specific keys are checked first)
 
 API keys are optional for local LLMs like Ollama that don't require authentication.
 
 Configure API keys file:
 ```bash
-llm-caller config set secret_file ~/.llm-caller/keys.json
+llm-caller config secret_file ~/.llm-caller/keys.json
 ```
 
 ## Templates
@@ -202,19 +209,19 @@ llm-caller template validate my-template
 ### Configuration Examples
 ```bash
 # Set custom template directory
-llm-caller config set template_dir ~/my-templates
+llm-caller config template_dir ~/my-templates
 
 # Set API keys file
-llm-caller config set secret_file ~/.api-keys.json
+llm-caller config secret_file ~/.api-keys.json
 
 # View current configuration
-llm-caller config list
+llm-caller config ls
 
 # Get specific setting
-llm-caller config get template_dir
+llm-caller config template_dir
 
 # Reset to default
-llm-caller config unset template_dir
+llm-caller config rm template_dir
 ```
 
 ### Troubleshooting
@@ -236,3 +243,16 @@ llm-caller doctor
 ## License
 
 [MIT License](LICENSE)
+
+### Template Validation
+
+To validate a template structure:
+```bash
+llm-caller template validate my-template
+```
+
+This checks for:
+- Valid JSON format
+- Required fields (provider, request URL, request body)
+- Proper structure for HTTP requests
+- Response handling configuration

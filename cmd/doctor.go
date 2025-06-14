@@ -19,8 +19,10 @@ var doctorCmd = &cobra.Command{
 This command verifies:
 - Configuration file existence and validity
 - Template directory accessibility
-- API keys availability
-- Template file integrity`,
+- API keys availability (from file and environment variables)
+- Template file integrity
+
+It will identify issues and provide specific recommendations for fixing them.`,
 	RunE: runDoctor,
 }
 
@@ -132,7 +134,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println()
 		fmt.Println("Recommendations:")
-		fmt.Println("  - Run 'llm-caller config set secret_file ~/.llm-caller/keys.json'")
+		fmt.Println("  - Run 'llm-caller config secret_file ~/.llm-caller/keys.json'")
 		fmt.Println("  - Create API keys file with: {\"api_key\": \"sk-xxx\"}")
 		fmt.Println("  - Download templates with: llm-caller template download <url>")
 		fmt.Println("  - Remember: API keys are optional")

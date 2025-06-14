@@ -11,72 +11,78 @@ import (
 
 // Config command
 var configCmd = &cobra.Command{
-	Use:   "config",
+	Use:   "config [key] [value]",
 	Short: "Configure application settings",
 	Long: `Manage application configuration including template directory and API keys file.
 
 Configuration is stored in ~/.llm-caller/config.yaml
 
+Usage:
+  config [key]            Get the value for a specific key
+  config [key] [value]    Set a value for a specific key
+  config ls               List all configuration values
+  config rm [key]         Remove a specific key (revert to default)
+
 Available settings:
   template_dir - Directory where template files are stored
-  secret_file  - Path to JSON file containing API keys`,
+  secret_file  - Path to JSON file containing API keys
+  
+Examples:
+  llm-caller config template_dir               # Get value
+  llm-caller config template_dir ~/my-templates # Set value
+  llm-caller config ls                         # List all settings
+  llm-caller config rm template_dir           # Remove setting (revert to default)`,
+	Args: cobra.MaximumNArgs(2),
+	RunE: runConfig,
 }
 
 // Config subcommands
-var configSetCmd = &cobra.Command{
-	Use:   "set <key> <value>",
-	Short: "Set a configuration value",
-	Long: `Set a configuration value. Valid keys: template_dir, secret_file
-
-Examples:
-  llm-caller config set template_dir ~/my-templates
-  llm-caller config set secret_file ~/.api-keys.json`,
-	Args: cobra.ExactArgs(2),
-	RunE: runConfigSet,
-}
-
-var configGetCmd = &cobra.Command{
-	Use:   "get <key>",
-	Short: "Get a configuration value",
-	Long: `Get a configuration value by its key.
-
-Examples:
-  llm-caller config get template_dir
-  llm-caller config get secret_file`,
-	Args: cobra.ExactArgs(1),
-	RunE: runConfigGet,
-}
-
-var configListCmd = &cobra.Command{
-	Use:   "list",
+var configLsCmd = &cobra.Command{
+	Use:   "ls",
 	Short: "List all configuration values",
 	Long:  `Display all current configuration values including file location.`,
+	Args:  cobra.NoArgs,
 	RunE:  runConfigList,
 }
 
-var configUnsetCmd = &cobra.Command{
-	Use:   "unset <key>",
+var configRmCmd = &cobra.Command{
+	Use:   "rm <key>",
 	Short: "Remove a configuration value",
 	Long: `Remove a configuration value, reverting to default.
 
 Examples:
-  llm-caller config unset template_dir
-  llm-caller config unset secret_file`,
+  llm-caller config rm template_dir
+  llm-caller config rm secret_file`,
 	Args: cobra.ExactArgs(1),
-	RunE: runConfigUnset,
+	RunE: runConfigRm,
 }
 
 func init() {
 	// Config subcommands
-	configCmd.AddCommand(configSetCmd)
-	configCmd.AddCommand(configGetCmd)
-	configCmd.AddCommand(configListCmd)
-	configCmd.AddCommand(configUnsetCmd)
+	configCmd.AddCommand(configLsCmd)
+	configCmd.AddCommand(configRmCmd)
 }
 
-// Config command handlers
-func runConfigSet(cmd *cobra.Command, args []string) error {
+// Config command handler - unified get/set functionality
+func runConfig(cmd *cobra.Command, args []string) error {
+	// If no arguments, show usage
+	if len(args) == 0 {
+		return cmd.Help()
+	}
+
 	key := args[0]
+
+	// If one argument, get the value (former get command)
+	if len(args) == 1 {
+		value := cfg.Get(key)
+		if value == nil {
+			return fmt.Errorf("key %s not found", key)
+		}
+		fmt.Println(value)
+		return nil
+	}
+
+	// If two arguments, set the value (former set command)
 	value := args[1]
 
 	// Validate key
@@ -100,16 +106,6 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runConfigGet(cmd *cobra.Command, args []string) error {
-	key := args[0]
-	value := cfg.Get(key)
-	if value == nil {
-		return fmt.Errorf("key %s not found", key)
-	}
-	fmt.Println(value)
-	return nil
-}
-
 func runConfigList(cmd *cobra.Command, args []string) error {
 	configPath := cfg.GetConfigFilePath()
 	fmt.Printf("Configuration file: %s\n\n", configPath)
@@ -121,7 +117,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runConfigUnset(cmd *cobra.Command, args []string) error {
+func runConfigRm(cmd *cobra.Command, args []string) error {
 	key := args[0]
 
 	err := cfg.Delete(key)
@@ -130,9 +126,9 @@ func runConfigUnset(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Key %s not found (already unset or never existed)\n", key)
 			return nil
 		}
-		return fmt.Errorf("failed to unset config: %w", err)
+		return fmt.Errorf("failed to remove config: %w", err)
 	}
 
-	fmt.Printf("Unset %s (reverted to default)\n", key)
+	fmt.Printf("Removed %s (reverted to default)\n", key)
 	return nil
 }
