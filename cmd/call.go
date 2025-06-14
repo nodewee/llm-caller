@@ -33,7 +33,8 @@ The result is either printed to stdout or saved to a file.
 Examples:
   llm-caller call deepseek-chat --var prompt="Hello world"
   llm-caller call translate --var text:file:doc.txt -o result.txt
-  llm-caller call gpt-4 --var prompt="Explain AI" --api-key sk-xxx`,
+  llm-caller call gpt-4 --var prompt="Explain AI" --api-key sk-xxx
+  llm-caller call ollama-local --var prompt="Tell me a joke" # API key is optional`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCall,
 }
@@ -41,7 +42,7 @@ Examples:
 func init() {
 	// Call command flags
 	callCmd.Flags().StringArrayVar(&varFlags, "var", []string{}, "Variable in format name:value or name:type:value (text|file|base64)")
-	callCmd.Flags().StringVar(&apiKeyFlag, "api-key", "", "API key (overrides config and environment)")
+	callCmd.Flags().StringVar(&apiKeyFlag, "api-key", "", "API key (optional, overrides config and environment)")
 	callCmd.Flags().StringVarP(&outputFlag, "output", "o", "", "Output file path (default: stdout)")
 }
 
@@ -67,11 +68,13 @@ func runCall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get API key: %w", err)
 	}
 
-	// Add api_key to replacement variables
+	// Add api_key to replacement variables if not empty
 	if replaceVars == nil {
 		replaceVars = make(map[string]string)
 	}
-	replaceVars["api_key"] = apiKey
+	if apiKey != "" {
+		replaceVars["api_key"] = apiKey
+	}
 
 	// Replace variables if needed
 	if len(replaceVars) > 0 {
@@ -199,8 +202,8 @@ func getAPIKey(cliAPIKey string, cfg *config.Config, template *templates.Templat
 		}
 	}
 
-	return "", fmt.Errorf("API key not found. Please provide it via --api-key flag, secret file, or %s environment variable",
-		strings.ToUpper(template.Provider)+"_API_KEY")
+	// API key is optional - return empty string if no key is found
+	return "", nil
 }
 
 // loadApiKeys loads API keys from a JSON file

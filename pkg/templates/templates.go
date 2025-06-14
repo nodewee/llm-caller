@@ -20,7 +20,16 @@ type RequestConfig struct {
 
 // ResponseConfig contains the response parsing configuration
 type ResponseConfig struct {
+	// Path is the dot-notation path to extract content from the response (e.g. "choices[0].message.content")
 	Path string `json:"path,omitempty"`
+
+	// AutoDetect enables automatic detection of response formats from various LLM providers
+	// When true, the system will attempt to identify common response formats before using Path
+	AutoDetect bool `json:"auto_detect,omitempty"`
+
+	// ResponseFieldName specifies which field name to look for when extracting content (e.g. "response", "content")
+	// This is used as a hint for auto-detection, prioritizing this field name if specified
+	ResponseFieldName string `json:"response_field_name,omitempty"`
 }
 
 // Template represents the unified template format
@@ -111,8 +120,16 @@ func parseTemplate(data []byte) (*Template, error) {
 	if template.Request.Method == "" {
 		template.Request.Method = "POST"
 	}
+
+	// Set response defaults
 	if template.Response.Path == "" {
+		// Default to chat completion format if no path specified
 		template.Response.Path = "choices[0].message.content"
+	}
+
+	// Enable auto-detection by default
+	if !template.Response.AutoDetect {
+		template.Response.AutoDetect = true
 	}
 
 	// Validate the template

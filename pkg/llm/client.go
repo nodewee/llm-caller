@@ -21,10 +21,7 @@ type GenericClient struct {
 
 // NewGenericClient creates a new generic client
 func NewGenericClient(apiKey string) (*GenericClient, error) {
-	if apiKey == "" {
-		return nil, fmt.Errorf("empty API key provided")
-	}
-
+	// Allow empty API key for local LLMs that don't require authentication
 	return &GenericClient{
 		APIKey: apiKey,
 		Client: &http.Client{},
@@ -68,20 +65,65 @@ func (c *GenericClient) Call(template *templates.Template) (string, error) {
 
 	// Check for error response
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("API request failed (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	// Parse the response and extract the content
-	result, err := c.extractResponseContent(body, template.Response.Path)
-	if err != nil {
-		return "", fmt.Errorf("failed to extract response content: %w", err)
+	// Use auto-detection if enabled, otherwise use the specified path
+	var result string
+	if template.Response.AutoDetect {
+		result, err = c.autoDetectResponseContent(body, template.Response.ResponseFieldName)
+		if err != nil {
+			// Fall back to path-based extraction if auto-detection fails
+			result, err = c.extractResponseContentByPath(body, template.Response.Path)
+			if err != nil {
+				// Preserve the detailed error from extractResponseContentByPath
+				return "", err
+			}
+		}
+	} else {
+		// Use path-based extraction directly
+		result, err = c.extractResponseContentByPath(body, template.Response.Path)
+		if err != nil {
+			// Preserve the detailed error from extractResponseContentByPath
+			return "", err
+		}
 	}
 
 	return result, nil
 }
 
-// extractResponseContent extracts content from the response using the response path
-func (c *GenericClient) extractResponseContent(body []byte, responsePath string) (string, error) {
+// autoDetectResponseContent tries to automatically detect the response format
+func (c *GenericClient) autoDetectResponseContent(body []byte, preferredResponseField string) (string, error) {
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", fmt.Errorf("failed to parse response JSON: %w", err)
+	}
+
+	// If a specific response field is requested, try that first
+	if preferredResponseField != "" {
+		if content, ok := response[preferredResponseField]; ok {
+			if strContent, ok := content.(string); ok {
+				return strContent, nil
+			}
+		}
+	}
+
+	// Otherwise use the general detection logic
+	content, ok := detectResponseFormat(response)
+	if !ok {
+		return "", fmt.Errorf("couldn't auto-detect response format")
+	}
+
+	return content, nil
+}
+
+// extractResponseContentByPath extracts content from the response using a dot-notation path
+// This is the original path-based extraction logic
+func (c *GenericClient) extractResponseContentByPath(body []byte, responsePath string) (string, error) {
+	if responsePath == "" {
+		return "", fmt.Errorf("response path is required for extraction")
+	}
+
 	var response map[string]interface{}
 	if err := json.Unmarshal(body, &response); err != nil {
 		return "", fmt.Errorf("failed to parse response JSON: %w", err)
@@ -90,8 +132,11 @@ func (c *GenericClient) extractResponseContent(body []byte, responsePath string)
 	// Navigate through the response path
 	parts := strings.Split(responsePath, ".")
 	current := interface{}(response)
+	var pathSoFar string
 
-	for _, part := range parts {
+	for i, part := range parts {
+		pathSoFar = strings.Join(parts[:i+1], ".")
+
 		// Handle array indices like "choices[0]"
 		if strings.Contains(part, "[") && strings.Contains(part, "]") {
 			arrayName := part[:strings.Index(part, "[")]
@@ -105,24 +150,34 @@ func (c *GenericClient) extractResponseContent(body []byte, responsePath string)
 			if arrayName != "" {
 				current = navigateToField(current, arrayName)
 				if current == nil {
-					return "", fmt.Errorf("field '%s' not found in response", arrayName)
+					// Show error with response structure for better debugging
+					prettyResponse, _ := formatResponseStructure(response)
+					return "", fmt.Errorf("field '%s' not found in response path '%s'. API response structure: %s",
+						arrayName, pathSoFar, prettyResponse)
 				}
 			}
 
 			// Get the array element
 			if arr, ok := current.([]interface{}); ok {
 				if index >= len(arr) {
-					return "", fmt.Errorf("array index %d out of bounds in response", index)
+					prettyResponse, _ := formatResponseStructure(response)
+					return "", fmt.Errorf("array index %d out of bounds in response path '%s' (array length: %d). API response structure: %s",
+						index, pathSoFar, len(arr), prettyResponse)
 				}
 				current = arr[index]
 			} else {
-				return "", fmt.Errorf("expected array but got %T for field '%s'", current, arrayName)
+				prettyResponse, _ := formatResponseStructure(response)
+				return "", fmt.Errorf("expected array but got %T for field '%s' in path '%s'. API response structure: %s",
+					current, arrayName, pathSoFar, prettyResponse)
 			}
 		} else {
 			// Regular field navigation
 			current = navigateToField(current, part)
 			if current == nil {
-				return "", fmt.Errorf("field '%s' not found in response", part)
+				// Show error with response structure for better debugging
+				prettyResponse, _ := formatResponseStructure(response)
+				return "", fmt.Errorf("field '%s' not found in response path '%s'. API response structure: %s",
+					part, pathSoFar, prettyResponse)
 			}
 		}
 	}
@@ -134,6 +189,93 @@ func (c *GenericClient) extractResponseContent(body []byte, responsePath string)
 
 	// If it's not a string, try to convert it
 	return fmt.Sprintf("%v", current), nil
+}
+
+// formatResponseStructure returns a formatted string representation of the response structure
+// It's used for debugging when a path can't be found
+func formatResponseStructure(response map[string]interface{}) (string, error) {
+	// Pretty-print the response structure with indent
+	prettyJSON, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return "{error formatting response}", err
+	}
+
+	// If the response is too large, truncate it
+	if len(prettyJSON) > 1000 {
+		return string(prettyJSON[:1000]) + "... (truncated)", nil
+	}
+
+	return string(prettyJSON), nil
+}
+
+// detectResponseFormat attempts to identify and extract content from common LLM response formats
+// Handles various formats from different providers:
+// - Ollama (legacy and newer versions)
+// - OpenAI API (chat completions and standard completions)
+// - Anthropic
+// - Cohere
+// - Claude
+// Returns the extracted content string and a boolean success indicator
+func detectResponseFormat(response map[string]interface{}) (string, bool) {
+	// Ollama format (new) - direct "response" field
+	// {"model":"qwen2.5vl","created_at":"...","response":"Hello!...","done":true}
+	if response, ok := response["response"]; ok {
+		if strResponse, ok := response.(string); ok {
+			return strResponse, true
+		}
+	}
+
+	// OpenAI format - choices[0].message.content or choices[0].text
+	if choices, ok := response["choices"].([]interface{}); ok && len(choices) > 0 {
+		choice := choices[0]
+		if choiceMap, ok := choice.(map[string]interface{}); ok {
+			// ChatCompletions format (choices[0].message.content)
+			if message, ok := choiceMap["message"].(map[string]interface{}); ok {
+				if content, ok := message["content"].(string); ok {
+					return content, true
+				}
+			}
+			// Completions format (choices[0].text)
+			if text, ok := choiceMap["text"].(string); ok {
+				return text, true
+			}
+		}
+	}
+
+	// Anthropic format - content or completion
+	if content, ok := response["content"].(string); ok {
+		return content, true
+	}
+	if completion, ok := response["completion"].(string); ok {
+		return completion, true
+	}
+
+	// Cohere format - generations[0].text
+	if generations, ok := response["generations"].([]interface{}); ok && len(generations) > 0 {
+		generation := generations[0]
+		if genMap, ok := generation.(map[string]interface{}); ok {
+			if text, ok := genMap["text"].(string); ok {
+				return text, true
+			}
+		}
+	}
+
+	// Ollama format (older version) - content
+	if content, ok := response["content"].(string); ok {
+		return content, true
+	}
+
+	// Claude format - content[0].text
+	if content, ok := response["content"].([]interface{}); ok && len(content) > 0 {
+		if contentMap, ok := content[0].(map[string]interface{}); ok {
+			if text, ok := contentMap["text"].(string); ok {
+				return text, true
+			}
+		}
+	}
+
+	// No recognized format
+	return "", false
 }
 
 // navigateToField navigates to a specific field in a map or struct
