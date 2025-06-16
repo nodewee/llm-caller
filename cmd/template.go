@@ -38,10 +38,15 @@ var templateDownloadCmd = &cobra.Command{
 	Long: `Download a template file from a GitHub repository URL.
 
 Supported URL formats:
-  https://github.com/owner/repo/blob/branch/filename.json
+  1. GitHub blob URLs:
+     https://github.com/owner/repo/blob/branch/filename.json
+  2. Raw GitHub URLs:
+     https://raw.githubusercontent.com/owner/repo/branch/filename.json
+     https://raw.githubusercontent.com/owner/repo/refs/heads/branch/filename.json
 
 Examples:
-  llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json`,
+  llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
+  llm-caller template download https://raw.githubusercontent.com/nodewee/llm-calling-templates/refs/heads/main/ollama-image-class.json`,
 	Args: cobra.ExactArgs(1),
 	RunE: runTemplateDownload,
 }

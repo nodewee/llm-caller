@@ -27,17 +27,26 @@ func NewGitHubDownloader() *GitHubDownloader {
 	}
 }
 
-// ConvertToRawURL converts a GitHub blob URL to raw content URL
-// Example: https://github.com/nodewee/llm-calling-templates/blob/main/qwen-vl-ocr-image.json
-// Becomes: https://raw.githubusercontent.com/nodewee/llm-calling-templates/main/qwen-vl-ocr-image.json
+// ConvertToRawURL converts a GitHub blob URL to raw content URL or returns raw URLs as-is
+// Supported formats:
+//  1. https://github.com/nodewee/llm-calling-templates/blob/main/qwen-vl-ocr-image.json
+//     Becomes: https://raw.githubusercontent.com/nodewee/llm-calling-templates/main/qwen-vl-ocr-image.json
+//  2. https://raw.githubusercontent.com/nodewee/llm-calling-templates/refs/heads/main/ollama-image-class.json
+//     Returns: as-is (already raw format)
 func (d *GitHubDownloader) ConvertToRawURL(githubURL string) (string, error) {
 	parsedURL, err := url.Parse(githubURL)
 	if err != nil {
 		return "", fmt.Errorf("invalid URL: %w", err)
 	}
 
+	// Check if it's already a raw GitHub URL
+	if parsedURL.Host == "raw.githubusercontent.com" {
+		return githubURL, nil
+	}
+
+	// Check if it's a regular GitHub URL
 	if parsedURL.Host != "github.com" {
-		return "", fmt.Errorf("URL must be from github.com, got: %s", parsedURL.Host)
+		return "", fmt.Errorf("URL must be from github.com or raw.githubusercontent.com, got: %s", parsedURL.Host)
 	}
 
 	// Parse path: /owner/repo/blob/branch/file

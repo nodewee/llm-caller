@@ -21,7 +21,7 @@ go build -o llm-caller
 # Set up your API key
 export DEEPSEEK_API_KEY="sk-your-key-here"
 
-# Download a template
+# Download a template (supports both blob and raw URLs)
 llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
 
 # Use the template
@@ -193,8 +193,11 @@ llm-caller call translate --var text:file:doc.txt -o translation.txt
 
 ### Template Management
 ```bash
-# Download templates from GitHub
+# Download templates from GitHub (blob URLs)
 llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
+
+# Download templates from GitHub (raw URLs)
+llm-caller template download https://raw.githubusercontent.com/nodewee/llm-calling-templates/refs/heads/main/ollama-image-class.json
 
 # List all available templates
 llm-caller template list

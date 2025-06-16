@@ -15,8 +15,9 @@ var (
 
 // Root command - simplified with clear subcommands
 var rootCmd = &cobra.Command{
-	Use:   "llm-caller",
-	Short: "A unified CLI tool for calling various LLM services",
+	Use:          "llm-caller",
+	Short:        "A unified CLI tool for calling various LLM services",
+	SilenceUsage: true,
 	Long: `LLM Caller - Call various LLM services using JSON templates
 
 Main Commands:
