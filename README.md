@@ -55,8 +55,8 @@ Manage configuration:
 ```bash
 llm-caller config <key>                     # Get configuration value
 llm-caller config <key> <value>             # Set configuration
-llm-caller config ls                        # Show all settings
-llm-caller config rm <key>                  # Remove setting (revert to default)
+llm-caller config list                      # Show all settings
+llm-caller config remove <key>              # Remove setting (revert to default)
 ```
 
 ### 🩺 `doctor` - Environment Check
@@ -218,13 +218,13 @@ llm-caller config template_dir ~/my-templates
 llm-caller config secret_file ~/.api-keys.json
 
 # View current configuration
-llm-caller config ls
+llm-caller config list
 
 # Get specific setting
 llm-caller config template_dir
 
 # Reset to default
-llm-caller config rm template_dir
+llm-caller config remove template_dir
 ```
 
 ### Troubleshooting

@@ -20,8 +20,8 @@ Configuration is stored in ~/.llm-caller/config.yaml
 Usage:
   config [key]            Get the value for a specific key
   config [key] [value]    Set a value for a specific key
-  config ls               List all configuration values
-  config rm [key]         Remove a specific key (revert to default)
+  config list             List all configuration values
+  config remove [key]     Remove a specific key (revert to default)
 
 Available settings:
   template_dir - Directory where template files are stored
@@ -30,37 +30,37 @@ Available settings:
 Examples:
   llm-caller config template_dir               # Get value
   llm-caller config template_dir ~/my-templates # Set value
-  llm-caller config ls                         # List all settings
-  llm-caller config rm template_dir           # Remove setting (revert to default)`,
+  llm-caller config list                       # List all settings
+  llm-caller config remove template_dir        # Remove setting (revert to default)`,
 	Args: cobra.MaximumNArgs(2),
 	RunE: runConfig,
 }
 
 // Config subcommands
-var configLsCmd = &cobra.Command{
-	Use:   "ls",
+var configListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "List all configuration values",
 	Long:  `Display all current configuration values including file location.`,
 	Args:  cobra.NoArgs,
 	RunE:  runConfigList,
 }
 
-var configRmCmd = &cobra.Command{
-	Use:   "rm <key>",
+var configRemoveCmd = &cobra.Command{
+	Use:   "remove <key>",
 	Short: "Remove a configuration value",
 	Long: `Remove a configuration value, reverting to default.
 
 Examples:
-  llm-caller config rm template_dir
-  llm-caller config rm secret_file`,
+  llm-caller config remove template_dir
+  llm-caller config remove secret_file`,
 	Args: cobra.ExactArgs(1),
-	RunE: runConfigRm,
+	RunE: runConfigRemove,
 }
 
 func init() {
 	// Config subcommands
-	configCmd.AddCommand(configLsCmd)
-	configCmd.AddCommand(configRmCmd)
+	configCmd.AddCommand(configListCmd)
+	configCmd.AddCommand(configRemoveCmd)
 }
 
 // Config command handler - unified get/set functionality
@@ -117,7 +117,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runConfigRm(cmd *cobra.Command, args []string) error {
+func runConfigRemove(cmd *cobra.Command, args []string) error {
 	key := args[0]
 
 	err := cfg.Delete(key)
