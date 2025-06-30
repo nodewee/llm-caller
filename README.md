@@ -25,10 +25,10 @@ export DEEPSEEK_API_KEY="sk-your-key-here"
 llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
 
 # Use the template
-llm-caller call deepseek-chat --var prompt="Explain quantum computing"
+llm-caller call deepseek-chat --var "prompt:Explain quantum computing"
 
 # For local LLMs (like Ollama) that don't require API keys
-llm-caller call ollama-local --var prompt="Explain quantum computing"
+llm-caller call ollama-local --var "prompt:Explain quantum computing"
 ```
 
 ## Main Commands
@@ -36,10 +36,11 @@ llm-caller call ollama-local --var prompt="Explain quantum computing"
 LLM Caller provides the following command categories:
 
 ### 🔧 `call` - Execute LLM API Calls
-Execute an LLM API call using a template:
-```bash
-llm-caller call <template> --var name=value [options]
-```
+Execute an LLM API call using a template. Supports three template sources:
+
+1. **Template file**: `llm-caller call <template-name> --var name=value [options]`
+2. **JSON string**: `llm-caller call --template-json '{"provider":"..."}' --var name=value [options]`
+3. **Base64 encoded**: `llm-caller call --template-base64 "eyJ..." --var name=value [options]`
 
 ### 📝 `template` - Manage Templates  
 Manage template files:
@@ -76,7 +77,7 @@ The doctor command checks:
 Display version and build information:
 ```bash
 llm-caller version                          # Show detailed version info with commit hash and build time
-llm-caller --version                        # Show basic version number
+llm-caller --version                        # Show detailed version info with commit hash and build time
 ```
 
 ## Configuration
@@ -128,10 +129,54 @@ Templates are JSON files defining LLM API calls. Example:
 }
 ```
 
+## Template Sources
+
+LLM Caller supports three mutually exclusive ways to provide templates:
+
+### 1. Template Files (Traditional)
 Templates are searched in:
 1. Direct path (if contains `/` or `\`)
 2. User template directory (configurable)
 3. Downloaded templates (`~/.llm-caller/templates`)
+
+```bash
+llm-caller call deepseek-chat --var "prompt:Hello world"
+```
+
+### 2. JSON String Templates
+Pass template content directly as a JSON string. Ideal for simple scenarios and quick testing:
+
+```bash
+llm-caller call --template-json '{
+  "provider": "deepseek",
+  "request": {
+    "url": "https://api.deepseek.com/chat/completions",
+    "headers": {"Authorization": "Bearer {{api_key}}"},
+    "body": {
+      "model": "deepseek-chat",
+      "messages": [{"role": "user", "content": "{{prompt}}"}]
+    }
+  }
+}' --var "prompt:Hello world"
+```
+
+### 3. Base64 Encoded Templates  
+Perfect for automation, CI/CD, and complex templates with special characters:
+
+```bash
+# Generate Base64 template
+TEMPLATE_JSON='{"provider":"deepseek",...}'
+TEMPLATE_B64=$(echo "$TEMPLATE_JSON" | base64)
+
+# Use in automation
+llm-caller call --template-base64 "$TEMPLATE_B64" --var "prompt:$USER_INPUT"
+```
+
+**Benefits of Base64 encoding:**
+- ✅ Solves shell escaping issues with quotes and special characters
+- ✅ Perfect for CI/CD environments  
+- ✅ Enables dynamic template generation in scripts
+- ✅ Supports templates with newlines and complex formatting
 
 ### Template Structure
 
@@ -152,8 +197,15 @@ Templates are searched in:
 
 ### Basic Usage
 ```bash
-# Simple text variable
+# Using template file (traditional method)
 llm-caller call deepseek-chat --var "prompt:Hello world"
+
+# Using JSON template (direct inline)
+llm-caller call --template-json '{"provider":"deepseek","request":{"url":"https://api.deepseek.com/chat/completions","headers":{"Authorization":"Bearer {{api_key}}"},"body":{"model":"deepseek-chat","messages":[{"role":"user","content":"{{prompt}}"}]}}}' --var "prompt:Hello world"
+
+# Using Base64 template (for automation/scripting)
+TEMPLATE_B64="eyJwcm92aWRlciI6ImRlZXBzZWVrIiwicmVxdWVzdCI6eyJ1cmwiOiJodHRwczovL2FwaS5kZWVwc2Vlay5jb20vY2hhdC9jb21wbGV0aW9ucyIsImhlYWRlcnMiOnsiQXV0aG9yaXphdGlvbiI6IkJlYXJlciB7e2FwaV9rZXl9fSJ9LCJib2R5Ijp7Im1vZGVsIjoiZGVlcHNlZWstY2hhdCIsIm1lc3NhZ2VzIjpbeyJyb2xlIjoidXNlciIsImNvbnRlbnQiOiJ7e3Byb21wdH19In1dfX19"
+llm-caller call --template-base64 "$TEMPLATE_B64" --var "prompt:Hello world"
 
 # Multiple variables (using colon-separated format)
 llm-caller call translate --var "text:Hello" --var "target_lang:Chinese"
@@ -161,101 +213,30 @@ llm-caller call translate --var "text:text:Hello" --var "target_lang:text:Chines
 ```
 
 ### Variable Types
-Variables support three types with the following formats:
-- `name:value` - Simple format (text type by default)
+Variables support two types with the following formats:
+- `name:value` - Simple format (shorthand for `name:text:value`)
 - `name:type:value` - Detailed format with explicit type
 
 Supported types:
-- `text` - Use value as-is (default if type not specified)
-- `file` - Read content from file
-- `base64` - Decode base64 content
+- `text` - Use value as-is. If `value` is `-`, content is read raw from `stdin`.
+- `file` - Reads content from a file path. The file content is used as a raw string. No special encoding (like Base64 for binary files) is performed.
+  - If `path` is `-`, content is read raw from `stdin` without any conversion.
 
 ```bash
-# Text (default)
+# Text (default and from stdin)
 llm-caller call template --var "prompt:Hello world"
-llm-caller call template --var "prompt:text:Hello world"
+cat doc.txt | llm-caller call template --var "prompt:text:-"
 
-# File content
-llm-caller call translate --var "prompt:file:document.txt"
+# File content (reads as raw string)
+# Reads my_document.txt as plain text
+llm-caller call template --var "prompt:file:my_document.txt"
 
-# Base64 content
-llm-caller call analyze --var "prompt:base64:SGVsbG8gd29ybGQ="
+# Reads my_image.png as a raw string (no Base64 encoding)
+llm-caller call vision-template --var "image_data:file:my_image.png"
+
+# Pipe content from stdin (read as raw text)
+cat my_image.png | llm-caller call vision-template --var "image_data:file:-"
 ```
 
 ### Output Options
-```bash
-# Print to stdout (default)
-llm-caller call deepseek-chat --var prompt="Hello"
-
-# Save to file
-llm-caller call translate --var text:file:doc.txt -o translation.txt
 ```
-
-### Template Management
-```bash
-# Download templates from GitHub (blob URLs)
-llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
-
-# Download templates from GitHub (raw URLs)
-llm-caller template download https://raw.githubusercontent.com/nodewee/llm-calling-templates/refs/heads/main/ollama-image-class.json
-
-# List all available templates
-llm-caller template list
-
-# View template content
-llm-caller template show deepseek-chat
-
-# Validate template structure
-llm-caller template validate my-template
-```
-
-### Configuration Examples
-```bash
-# Set custom template directory
-llm-caller config template_dir ~/my-templates
-
-# Set API keys file
-llm-caller config secret_file ~/.api-keys.json
-
-# View current configuration
-llm-caller config list
-
-# Get specific setting
-llm-caller config template_dir
-
-# Reset to default
-llm-caller config remove template_dir
-```
-
-### Troubleshooting
-```bash
-# Check environment and configuration
-llm-caller doctor
-
-# This will verify:
-# - Configuration file existence
-# - Template directory accessibility  
-# - API keys availability
-# - Template file integrity
-```
-
-## Template Repositories
-
-- [Official Templates](https://github.com/nodewee/llm-calling-templates) - Community-contributed templates
-
-## License
-
-[MIT License](LICENSE)
-
-### Template Validation
-
-To validate a template structure:
-```bash
-llm-caller template validate my-template
-```
-
-This checks for:
-- Valid JSON format
-- Required fields (provider, request URL, request body)
-- Proper structure for HTTP requests
-- Response handling configuration

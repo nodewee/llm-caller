@@ -124,9 +124,9 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 		fmt.Println("Quick start:")
 		fmt.Println("  llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json")
-		fmt.Println("  llm-caller call deepseek-chat --var prompt=\"Hello world\" --api-key sk-xxx")
+		fmt.Println("  llm-caller call deepseek-chat --var \"prompt:Hello world\" --api-key sk-xxx")
 		fmt.Println("  # API key is optional:")
-		fmt.Println("  llm-caller call ollama-local --var prompt=\"Hello world\"")
+		fmt.Println("  llm-caller call ollama-local --var \"prompt:Hello world\"")
 	} else {
 		fmt.Printf("⚠️  Found %d issues:\n", len(issues))
 		for i, issue := range issues {

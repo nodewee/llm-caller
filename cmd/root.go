@@ -27,10 +27,10 @@ Main Commands:
   doctor     Check configuration and environment
   version    Display detailed version information with commit hash and build time
 
-You can also use --version flag to display basic version information.
+You can also use the --version flag to display detailed version information.
 
 Examples:
-  llm-caller call deepseek-chat --var prompt="Hello world"
+  llm-caller call deepseek-chat --var "prompt:Hello world"
   llm-caller template download https://github.com/nodewee/llm-calling-templates/blob/main/deepseek-chat.json
   llm-caller config template_dir ~/my-templates
   llm-caller doctor

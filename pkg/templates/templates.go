@@ -59,6 +59,15 @@ func (t *Template) Validate() error {
 	return nil
 }
 
+// LoadTemplateFromJSON loads a template from a JSON string
+func LoadTemplateFromJSON(jsonStr string) (*Template, error) {
+	if strings.TrimSpace(jsonStr) == "" {
+		return nil, fmt.Errorf("template JSON string is empty")
+	}
+
+	return parseTemplate([]byte(jsonStr))
+}
+
 // LoadTemplate loads a template with priority order:
 // 1. If templatePath is absolute or contains path separators, load directly
 // 2. Otherwise, search in user configured template directory
