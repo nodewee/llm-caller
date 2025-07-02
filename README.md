@@ -46,7 +46,7 @@ Execute an LLM API call using a template. Supports three template sources:
 Manage template files:
 ```bash
 llm-caller template list                    # List available templates
-llm-caller template download <github-url>   # Download from GitHub
+llm-caller template download <github-url>   # Download from GitHub with mirror fallback
 llm-caller template show <template-name>    # Display template content
 llm-caller template validate <template-name> # Validate template structure
 ```
